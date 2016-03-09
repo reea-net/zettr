@@ -1,0 +1,9 @@
+Handler,Param1,Param2,Param3,GROUPS,DEFAULT,devbox,integration,production,staging
+,,,,,,,,,
+# Database parameters first (as Est_Handler_Magento_CoreConfigData relies on this):,,,,,,,,,
+Zettr\Handler\EnvFile,app/etc/env.php,dbname,,db,,magento2,,,
+Zettr\Handler\EnvFile,app/etc/env.php,host,,db,,localhost,,,
+Zettr\Handler\EnvFile,app/etc/env.php,password,,db,,123456,,,
+Zettr\Handler\EnvFile,app/etc/env.php,username,,db,,root,,,
+Zettr\Handler\Magento2\CoreConfigData,%,%,web/{{unsecure|secure}}/base{{_skin|_media|_js|}}_url,,--delete--,,,,
+Zettr\Handler\Magento2\CoreConfigData,default,0,web/{{unsecure|secure}}/base_url,,,http://localhost/magento_installer/,,,http://localhost/magento_installer/
