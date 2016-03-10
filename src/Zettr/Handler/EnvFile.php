@@ -13,8 +13,8 @@ class EnvFile extends AbstractHandler {
      * @return bool
      */
     protected function _apply() {
-         
-         
+
+
         $file = $this->param1;
         $expression = $this->param2;
 
@@ -33,33 +33,38 @@ class EnvFile extends AbstractHandler {
 
         $fileContent = require $file;
         if ($fileContent === false) {
-            
+
             throw new \Exception(sprintf('Error while reading file "%s"', $file));
         }
-             
-        
-        $find = $this->search($fileContent,$expression);
+
+
+        $expression_array = explode("/",$expression);
+        $search_key = array_pop($expression_array);
+
+        $results = $this->search($fileContent,$search_key);
+
         $changes = 0;
-        
-        if($find){
-            if($find['value']==$this->value){
+
+        if(count($results)>0){
+            if($results[$expression]==$this->value){
                 $this->addMessage(new Message(sprintf('Value "%s" is already in place. Skipping.', $this->value), Message::SKIPPED));
             }else{
-                $this->addMessage(new Message(sprintf('Updated value from "%s" to "%s"', $find['value'], $this->value)));
-                $data = $this->stringToArray($find['path'],$this->value);
+                $this->addMessage(new Message(sprintf('Updated value from "%s" to "%s"', $results[$expression], $this->value)));
+                $data = $this->stringToArray($expression,$this->value);
                 $fileContent = array_replace_recursive($fileContent,$data);
                 $changes++;
             }
         }else{
-            $this->setStatus(HandlerInterface::STATUS_SUBJECTNOTFOUND);
-            throw new \Exception(sprintf('No config elements found', $expression));
+            $this->addMessage(new Message(sprintf('Added new value %s for "%s"', $expression, $this->value)));
+            $data = $this->stringToArray($expression,$this->value);
+            $fileContent = array_replace_recursive($fileContent,$data);
+            $changes++;
         }
-        
 
         if ($changes > 0) {
-            
+
             $contents = "<?php\nreturn " . var_export($fileContent, true) . ";\n";
-            
+
             $res = file_put_contents($file, $contents);
             if ($res === false) {
                 throw new \Exception(sprintf('Error while writing file "%s"', $file));
@@ -76,34 +81,36 @@ class EnvFile extends AbstractHandler {
         $iter = new \RecursiveIteratorIterator(
             new \RecursiveArrayIterator($array),
             \RecursiveIteratorIterator::SELF_FIRST);
-    
+        $results = [];
         foreach ($iter as $key => $value) {
+
             if ($key === $searchKey) {
                 $keys = array($key);
                 for($i=$iter->getDepth()-1;$i>=0;$i--){
                     array_unshift($keys, $iter->getSubIterator($i)->key());
                 }
-                return array('path'=>implode('.', $keys), 'value'=>$value);
+                $tmp = array('path'=>implode('/', $keys), 'value'=>$value);
+                $results[implode('/', $keys)] = $value;
             }
         }
-        return false;
+        return $results;
     }
-    
+
     function stringToArray($path='',$value='')
     {
-        $separator = '.';
+        $separator = '/';
         $pos = strpos($path, $separator);
         if ($pos === false) {
             return array($path=>$value);
         }
-    
+
         $key = substr($path, 0, $pos);
         $path = substr($path, $pos + 1);
-        
+
         $result = array(
             $key => $this->stringToArray($path,$value),
         );
-    
+
         return $result;
     }
 }
